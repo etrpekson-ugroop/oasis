@@ -7,22 +7,31 @@
  *
  */
 
+import API from 'apis';
 import React from 'react';
-import { Switch, Route } from 'react-router-dom';
-
+import { BrowserRouter, Switch, Route } from 'react-router-dom';
+import { sagas } from 'resaga';
+import { compose } from 'redux';
+import injectSaga from 'utils/injectSaga';
 import HomePage from 'containers/HomePage/Loadable';
 import NotFoundPage from 'containers/NotFoundPage/Loadable';
 
 import GlobalStyle from '../../global-styles';
 
-export default function App() {
+export function App() {
   return (
-    <div>
+    <BrowserRouter>
       <Switch>
         <Route exact path="/" component={HomePage} />
         <Route component={NotFoundPage} />
       </Switch>
       <GlobalStyle />
-    </div>
+      <API />
+    </BrowserRouter>
   );
 }
+
+// Only one resaga saga needs to be injected (injecting more creates duplicate watchers)
+const withSaga = injectSaga({ key: 'App', saga: sagas[0] });
+
+export default compose(withSaga)(App);

@@ -12,7 +12,7 @@ import '@babel/polyfill';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
-import { ConnectedRouter } from 'connected-react-router';
+import { ConnectedRouter } from 'connected-react-router/immutable';
 import history from 'utils/history';
 import 'sanitize.css/sanitize.css';
 
@@ -22,33 +22,62 @@ import App from 'containers/App';
 // Import Language Provider
 import LanguageProvider from 'containers/LanguageProvider';
 
+import { persistStore } from 'redux-persist-immutable';
+
 // Load the favicon and the .htaccess file
 /* eslint-disable import/no-unresolved, import/extensions */
 import '!file-loader?name=[name].[ext]!./images/favicon.ico';
 import 'file-loader?name=.htaccess!./.htaccess';
 /* eslint-enable import/no-unresolved, import/extensions */
 
-import configureStore from './configureStore';
+// LocalForage
+import { config } from './persistlayer/config';
+import {
+  // localSave,
+  // removeItemFromLocalForageAsync,
+  // removeItemFromLocalStorage,
+  configureLocalForage,
+} from './persistlayer';
 
+import configureStore from './configureStore';
 // Import i18n messages
+
 import { translationMessages } from './i18n';
 
 // Create redux store with history
 const initialState = {};
 const store = configureStore(initialState, history);
+
+// configure the localForage
+configureLocalForage();
+
 const MOUNT_NODE = document.getElementById('app');
 
-const render = messages => {
+const renderApp = messages => {
   ReactDOM.render(
     <Provider store={store}>
       <LanguageProvider messages={messages}>
         <ConnectedRouter history={history}>
-          <App />
+          <App history={history} />
         </ConnectedRouter>
       </LanguageProvider>
     </Provider>,
     MOUNT_NODE,
   );
+};
+
+let persisted = false;
+
+// delay render until store is persisted, to prevent flickering screen
+const render = messages => {
+  if (!persisted) {
+    persistStore(store, config, () => {
+      persisted = true;
+      renderApp(messages);
+    });
+  } else {
+    renderApp(messages);
+  }
 };
 
 if (module.hot) {
@@ -66,7 +95,12 @@ if (!window.Intl) {
   new Promise(resolve => {
     resolve(import('intl'));
   })
-    .then(() => Promise.all([import('intl/locale-data/jsonp/en.js')]))
+    .then(() =>
+      Promise.all([
+        import('intl/locale-data/jsonp/en.js'),
+        import('intl/locale-data/jsonp/de.js'),
+      ]),
+    ) // eslint-disable-line prettier/prettier
     .then(() => render(translationMessages))
     .catch(err => {
       throw err;
@@ -79,5 +113,11 @@ if (!window.Intl) {
 // it's not most important operation and if main code fails,
 // we do not want it installed
 if (process.env.NODE_ENV === 'production') {
-  require('offline-plugin/runtime').install(); // eslint-disable-line global-require
+  const OfflinePluginRuntime = require('offline-plugin/runtime'); // eslint-disable-line global-require
+  OfflinePluginRuntime.install({
+    onUpdateReady: () => OfflinePluginRuntime.applyUpdate(),
+    onUpdated: () => {
+      window.swUpdate = true;
+    },
+  });
 }

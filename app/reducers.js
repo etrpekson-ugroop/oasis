@@ -2,11 +2,18 @@
  * Combine all reducers in this file and export the combined reducers.
  */
 
-import { combineReducers } from 'redux';
-import { connectRouter } from 'connected-react-router';
+import { combineReducers } from 'redux-immutable';
+import { connectRouter } from 'connected-react-router/immutable';
+import { reducer } from 'resaga';
 
 import history from 'utils/history';
 import languageProviderReducer from 'containers/LanguageProvider/reducer';
+import { USER_LOGOUT, USER_DATA_STORE } from './appConstants';
+
+// tell resaga to clear store on USERLOGOUT
+export const customReducer = {
+  [USER_LOGOUT]: store => store.clear(),
+};
 
 /**
  * Merges the main reducer with the router state and dynamically injected reducers
@@ -14,9 +21,12 @@ import languageProviderReducer from 'containers/LanguageProvider/reducer';
 export default function createReducer(injectedReducers = {}) {
   const rootReducer = combineReducers({
     language: languageProviderReducer,
-    router: connectRouter(history),
+    // router: connectRouter(history),
+    [USER_DATA_STORE]: reducer(USER_DATA_STORE, customReducer),
     ...injectedReducers,
   });
 
-  return rootReducer;
+  // Wrap the root reducer and return a new root reducer with router state
+  const mergeWithRouterState = connectRouter(history);
+  return mergeWithRouterState(rootReducer);
 }

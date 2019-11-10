@@ -5,14 +5,21 @@
  *
  */
 
-import React from 'react';
-import { FormattedMessage } from 'react-intl';
-import messages from './messages';
+import React, { PureComponent } from 'react';
+import PropType from 'prop-types';
+import resaga from 'resaga';
+import { CONFIG } from './config';
 
-export default function HomePage() {
-  return (
-    <h1>
-      <FormattedMessage {...messages.header} />
-    </h1>
-  );
+export class Home extends PureComponent {
+  render() {
+    const { message } = this.props;
+    console.log('HOME', { message });
+    return <h1>{message}</h1>;
+  }
 }
+
+Home.propTypes = {
+  message: PropType.string,
+};
+
+export default resaga(CONFIG)(Home);
